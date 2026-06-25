@@ -18,6 +18,28 @@ curl http://localhost:8002/status
 curl http://localhost:8003/status
 ```
 
+Enviar uma mensagem do `node1` para o `node2`:
+
+```bash
+curl -X POST http://localhost:8001/send/2 \
+  -H "Content-Type: application/json" \
+  -d '{"text": "ola do node1"}'
+```
+
+Ver mensagens recebidas pelo `node2`:
+
+```bash
+curl http://localhost:8002/messages
+```
+
+Enviar uma mensagem do `node1` para todos os outros nos:
+
+```bash
+curl -X POST http://localhost:8001/broadcast \
+  -H "Content-Type: application/json" \
+  -d '{"text": "mensagem para todos"}'
+```
+
 Cada servico representa um no:
 
 - node1: http://localhost:8001
@@ -35,6 +57,7 @@ docker compose down
 ## Estrutura atual
 
 - `app/main.py`: API inicial de cada no.
+- `app/client.py`: cliente HTTP simples para comunicacao entre os nos.
 - `Dockerfile`: imagem da aplicacao.
 - `docker-compose.yml`: sobe cinco nos na mesma rede Docker.
 - `requirements.txt`: dependencias Python.
