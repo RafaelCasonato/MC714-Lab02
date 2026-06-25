@@ -9,6 +9,11 @@ from app.client import send_message
 class Message(BaseModel):
     sender_id: str | None = None
     text: str
+    clock: int | None = None
+
+
+class LocalEvent(BaseModel):
+    text: str = "evento local"
 
 
 def load_peers():
@@ -28,8 +33,41 @@ def load_peers():
 NODE_ID = os.getenv("NODE_ID", "1")
 PEERS = load_peers()
 MESSAGES = []
+CLOCK = 0
+CLOCK_HISTORY = []
 
 app = FastAPI(title=f"MC714 node {NODE_ID}")
+
+
+def local_event(description):
+    global CLOCK
+
+    CLOCK += 1
+
+    CLOCK_HISTORY.append({
+        "type": "local",
+        "clock": CLOCK,
+        "description": description,
+    })
+
+    return CLOCK
+
+
+def receive_event(received_clock, description):
+    global CLOCK
+
+    old_clock = CLOCK
+    CLOCK = max(CLOCK, received_clock) + 1
+
+    CLOCK_HISTORY.append({
+        "type": "receive",
+        "old_clock": old_clock,
+        "received_clock": received_clock,
+        "clock": CLOCK,
+        "description": description,
+    })
+
+    return CLOCK
 
 
 @app.get("/status")
@@ -37,6 +75,8 @@ def status():
     return {
         "node_id": NODE_ID,
         "peers": PEERS,
+        "clock": CLOCK,
+        "clock_history": CLOCK_HISTORY,
         "messages_received": len(MESSAGES),
     }
 
@@ -56,17 +96,34 @@ def list_messages():
 
 @app.post("/messages")
 def receive_message(message: Message):
+    received_clock = message.clock or 0
+    new_clock = receive_event(received_clock, f"mensagem recebida de {message.sender_id}")
+
     data = {
         "sender_id": message.sender_id,
         "text": message.text,
+        "received_clock": received_clock,
+        "local_clock": new_clock,
     }
     MESSAGES.append(data)
 
-    print(f"node {NODE_ID} recebeu mensagem de {message.sender_id}: {message.text}")
+    print(f"node {NODE_ID} recebeu mensagem de {message.sender_id}: {message.text} clock={new_clock}")
 
     return {
         "received_by": NODE_ID,
+        "clock": new_clock,
         "message": data,
+    }
+
+
+@app.post("/clock/local")
+def create_local_event(event: LocalEvent):
+    new_clock = local_event(event.text)
+
+    return {
+        "node_id": NODE_ID,
+        "clock": new_clock,
+        "description": event.text,
     }
 
 
@@ -79,9 +136,11 @@ async def send_to_peer(peer_id: str, message: Message):
             "peer_id": peer_id,
         }
 
+    new_clock = local_event(f"envio para node {peer_id}")
     data = {
         "sender_id": NODE_ID,
         "text": message.text,
+        "clock": new_clock,
     }
 
     result = await send_message(PEERS[peer_id], data)
@@ -90,6 +149,7 @@ async def send_to_peer(peer_id: str, message: Message):
         "ok": True,
         "sent_by": NODE_ID,
         "sent_to": peer_id,
+        "clock": new_clock,
         "response": result,
     }
 
@@ -102,9 +162,11 @@ async def broadcast(message: Message):
         if peer_id == NODE_ID:
             continue
 
+        new_clock = local_event(f"broadcast para node {peer_id}")
         data = {
             "sender_id": NODE_ID,
             "text": message.text,
+            "clock": new_clock,
         }
 
         try:

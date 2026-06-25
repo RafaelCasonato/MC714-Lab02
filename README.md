@@ -18,6 +18,14 @@ curl http://localhost:8002/status
 curl http://localhost:8003/status
 ```
 
+Criar um evento local no `node1`:
+
+```bash
+curl -X POST http://localhost:8001/clock/local \
+  -H "Content-Type: application/json" \
+  -d '{"text": "processamento local"}'
+```
+
 Enviar uma mensagem do `node1` para o `node2`:
 
 ```bash
@@ -30,6 +38,12 @@ Ver mensagens recebidas pelo `node2`:
 
 ```bash
 curl http://localhost:8002/messages
+```
+
+O campo `clock` em `/status` mostra o relogio logico do no. Quando um no recebe mensagem, ele atualiza o relogio usando:
+
+```text
+max(relogio_local, relogio_recebido) + 1
 ```
 
 Enviar uma mensagem do `node1` para todos os outros nos:
