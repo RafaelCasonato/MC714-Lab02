@@ -54,6 +54,20 @@ curl -X POST http://localhost:8001/broadcast \
   -d '{"text": "mensagem para todos"}'
 ```
 
+Pedir para um no entrar na secao critica:
+
+```bash
+curl -X POST http://localhost:8002/mutex/enter \
+  -H "Content-Type: application/json" \
+  -d '{"hold_seconds": 2}'
+```
+
+O estado da exclusao mutua aparece em:
+
+```bash
+curl http://localhost:8002/status
+```
+
 Cada servico representa um no:
 
 - node1: http://localhost:8001
