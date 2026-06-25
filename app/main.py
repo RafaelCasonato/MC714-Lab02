@@ -32,22 +32,6 @@ MESSAGES = []
 app = FastAPI(title=f"MC714 node {NODE_ID}")
 
 
-@app.get("/")
-def index():
-    return {
-        "message": "MC714 Lab02",
-        "node_id": NODE_ID,
-    }
-
-
-@app.get("/health")
-def health():
-    return {
-        "ok": True,
-        "node_id": NODE_ID,
-    }
-
-
 @app.get("/status")
 def status():
     return {
